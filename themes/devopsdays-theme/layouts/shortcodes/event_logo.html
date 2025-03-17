@@ -1,10 +1,18 @@
-{{- $e := (index $.Site.Data.events (index (split ($.Page.Permalink | relURL) "/") 2)) -}}
+{{- $e := partial "functions/get-event-data" . -}}
 {{- $.Scratch.Set "contentdir" (printf "static/events/%s/" $e.name) -}}
-{{- if (where (readDir "static/events") "Name" $e.name) -}}
+{{- $.Scratch.Set "assetsdir" (printf "assets/events/%s/" $e.name) -}}
+{{- if (where (readDir "assets/events") "Name" $e.name) -}}
+  {{- if (where (readDir ($.Scratch.Get "assetsdir")) "Name" "logo.png") -}} 
+    {{- $imagelocation := (printf "events/%s/logo.png" $e.name) -}}
+    {{- $imageresource := resources.Get $imagelocation -}}
+    {{- $imagefile := $imageresource.Resize "600x webp Lanczos q100" -}}
+    <img alt="devopsdays {{ $e.city }} {{ $e.year }}" src='{{ $imagefile.RelPermalink }}' class="welcome-page-event-logo"/>
+  {{- end -}}
+  {{- else if (where (readDir "static/events") "Name" $e.name) -}}
   {{- if (where (readDir ($.Scratch.Get "contentdir")) "Name" "logo.jpg") -}}
     {{- $.Scratch.Set "logo" "logo.jpg" -}}
   {{- else -}}
     {{- $.Scratch.Set "logo" "logo.png" -}}
   {{- end -}}
-  <img alt="devopsdays {{ $e.city }} {{ $e.year }}" src="{{ (printf "/events/%s/%s" $e.name ($.Scratch.Get "logo")) }}" class="welcome-page-event-logo"/>
+  <img alt="devopsdays {{ $e.city }} {{ $e.year }}" src='{{ (printf "/events/%s/%s" $e.name ($.Scratch.Get "logo")) }}' class="welcome-page-event-logo"/>
 {{- end -}}

@@ -9,7 +9,14 @@
     {{- $.Scratch.Set "icons" (. | upper ) -}}
   {{- end -}}
 
-  {{- $e := (index $.Site.Data.events (index (split (.Permalink | relURL) "/") 2)) -}}
+  {{- $e := partial "functions/get-event-data" . -}}
+
+  {{- $p := index $.Site.Data.events (index (split (.Permalink | relURL) "/") 2) "program" -}}
+
+
+{{ if eq $p nil }}
+  {{ $p = $e }}
+{{ end }}
  
   {{- if $e.startdate -}}
   {{/*  {{- range where $.Site.Pages "Type" "talk" -}}  */}}
@@ -82,18 +89,34 @@
   {{- end -}}
   <!-- end range where $.Site.Pages "Type" "speaker" -->
     <!-- Get the dates for the program -->
-    {{- with $e -}}
+    {{- with $p -}}
       {{- range .program -}}
         {{- $.Scratch.SetInMap "dates" .date .date -}}
       {{- end -}}
     {{- end -}}
   <!-- new experimental program end -->
+
+  {{- if or $e.timeoffset $e.timezone -}}
+  <script>
+    var userLang = navigator.language || navigator.userLanguage;
+    var date = new Date();
+    var userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    var userTimeAbbreviation = Intl.DateTimeFormat(userLang,{ timeZone: userTimeZone, timeZoneName: 'short' }).formatToParts().find(part => part.type==='timeZoneName').value;
+  </script>
+  {{- end -}}
+  {{- if $e.timezone -}}
+  <script>
+    var eventTimeOffset = (Intl.DateTimeFormat(userLang,{ timeZone: "{{ $e.timezone }}", timeZoneName: 'longOffset' }).formatToParts().find(part => part.type==='timeZoneName').value).slice(3,99);
+    var eventTimeAbbreviation = Intl.DateTimeFormat(userLang,{ timeZone: "{{ $e.timezone }}", timeZoneName: 'short' }).formatToParts().find(part => part.type==='timeZoneName').value;
+  </script>
+  {{- end -}}
+
   <div class="row">
     <div class="col">
       <div id="accordion" role="tablist" aria-multiselectable="true">
   {{- range ($.Scratch.GetSortedMapValues "dates") -}}
     {{- $.Scratch.Set "date" . -}}
-            {{- with $e -}}
+            {{- with $p -}}
               {{- if .program -}}
               <div class="card">
                 <div class="card-header" role="tab" id="{{printf "headingOne-%s" ($.Scratch.Get "date") }}">
@@ -103,7 +126,7 @@
                   </h5>
                 </div>
 
-                <div id="{{printf "#collapse-%s" ($.Scratch.Get "date") }}" class="collapse show" role="tabpanel" aria-labelledby="{{printf "headingOne-%s" ($.Scratch.Get "date") }}">
+                <div id='{{printf "#collapse-%s" ($.Scratch.Get "date") }}" class="collapse show" role="tabpanel" aria-labelledby="{{printf "headingOne-%s" ($.Scratch.Get "date") }}'>
                   <div class="card-block">
                     <div class="row">
                       <div class="col-lg-6">
@@ -118,6 +141,33 @@
                             {{ .start_time }}
                             -
                             {{ .end_time }}
+                            {{- if $e.timezone -}}
+                            &nbsp;<script>document.write(eventTimeAbbreviation)</script>
+                            {{- end -}}
+                            {{- if or $e.timeoffset $e.timezone -}}
+                              <br>
+                              {{- if $e.timeoffset -}}
+                              <script>
+                                var localstarttime = new Date("{{- dateFormat "2006-01-02" ($.Scratch.Get "date") -}}T"+{{- .start_time -}}+":00"+{{- $e.timeoffset -}});
+                                var localendtime = new Date("{{- dateFormat "2006-01-02" ($.Scratch.Get "date") -}}T"+{{- .end_time -}}+":00"+{{- $e.timeoffset -}});
+                              </script>
+                              {{- end -}}
+                              {{- if not $e.timeoffset -}}
+                              <script>
+                                var localstarttime = new Date("{{- dateFormat "2006-01-02" ($.Scratch.Get "date") -}}T"+{{ .start_time }}+":00"+eventTimeOffset);
+                                var localendtime = new Date("{{- dateFormat "2006-01-02" ($.Scratch.Get "date") -}}T"+{{ .end_time }}+":00"+eventTimeOffset);
+                              </script>
+                              {{- end -}}
+                              <script>
+                                document.write("<strong>");
+                                document.write(String(localstarttime.getHours()).padStart(2,"0")+":"+String(localstarttime.getMinutes()).padStart(2,"0"));
+                                document.write("&nbsp;-&nbsp;");
+                                document.write(String(localendtime.getHours()).padStart(2,"0")+":"+String(localendtime.getMinutes()).padStart(2,"0"));
+                                document.write("&nbsp;");
+                                document.write(userTimeAbbreviation);
+                                document.write("</strong>");
+                              </script>
+                            {{- end -}}
                           </div>
                           <div class="col-lg-8 col-md-6 program-element {{ printf "program-%s" .type }}" {{ if .background_color }}style="background-color: {{ .background_color }}"{{end}}>
                             {{- if eq .type "custom" -}}
@@ -133,7 +183,7 @@
                               {{- if .custom_url -}}
                                 <a href="{{ .custom_url | safeURL }}">{{ $.Scratch.Get (printf "%s-speaker" .title) }} - {{ $.Scratch.Get .title }}</a><br/>
                               {{- else -}}
-                                <a href="{{ (printf "/events/%s/program/%s" $e.name .title) }}">{{ $.Scratch.Get (printf "%s-speaker" .title) }} - {{ $.Scratch.Get .title }}</a><br/>
+                                <a href='{{ (printf "/events/%s/program/%s" $e.name .title) }}'>{{ $.Scratch.Get (printf "%s-speaker" .title) }} - {{ $.Scratch.Get .title }}</a><br/>
                               {{- end -}}
                               {{- if eq  ($.Scratch.Get "icons")  "TRUE" -}}
                                 {{- with ($.Scratch.Get (printf "%s-video_link" .title)) -}}&nbsp;<a href="{{ . }}"><i class="fa fa-video-camera" aria-hidden="true"></i></a>&nbsp;{{- end -}}
@@ -149,7 +199,7 @@
                               <ul class = "list-unstyled">
                                 {{- if .block -}}
                                   {{- $block := .block -}}
-                                  {{- range $e.ignites -}}
+                                  {{- range $p.ignites -}}
                                     {{- if eq .block $block -}}
                                       <li>
                                         <a href="/events/{{ $e.name }}/program/{{ .title }}">{{ $.Scratch.Get (printf "%s-speaker" .title) }} - {{ $.Scratch.Get .title }}</a>
@@ -162,7 +212,7 @@
                                     {{- end -}}
                                   {{- end -}}
                                 {{- else -}}
-                                  {{- range where $e.ignites "date" ($.Scratch.Get "date") -}}
+                                  {{- range where $p.ignites "date" ($.Scratch.Get "date") -}}
                                     {{- if not .block -}}
                                       <li>
                                         <a href="/events/{{ $e.name }}/program/{{ .title }}">{{ $.Scratch.Get (printf "%s-speaker" .title) }} - {{ $.Scratch.Get .title }}</a>
@@ -188,7 +238,7 @@
                                 {{- if .custom_url -}}
                                   <a href="{{ .custom_url | safeURL }}">{{ .title }}</a><br/>
                                 {{- else -}}
-                                  <a href="{{ "/open-space-format/" }}">{{ .title }}</a><br/>
+                                  <a href="/open-space-format/">{{ .title }}</a><br/>
                                 {{- end -}}
                               {{- else -}}
                                 {{ .title }}
@@ -215,5 +265,5 @@
 </div>
 </div>
 {{- end -}}
-
+{{ partial "sponsors.html" . }}
 {{ end }}

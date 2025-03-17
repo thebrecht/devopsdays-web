@@ -13,15 +13,18 @@
   command = "bin/netlify.sh"
   publish = "public/"
   skip_processing = true
+  
+#[build.processing]
+# skip_processing = true
 
 [context.production.environment]
-   HUGO_VERSION = "0.102.3"
+   HUGO_VERSION = "0.126.1"
 
 [context.deploy-preview.environment]
-  HUGO_VERSION = "0.102.3"
+  HUGO_VERSION = "0.126.1"
 
 [context.branch-deploy.environment]
-  HUGO_VERSION = "0.102.3"
+  HUGO_VERSION = "0.126.1"
 
 # Mastodon Configuration
 [[redirects]]
@@ -32,4 +35,8 @@
   for = "/.well-known/webfinger/*"
     [headers.values]
     Access-Control-Allow-Origin = "*"
-
+    
+    
+#[[plugins]]
+# package = "netlify-plugin-hashfiles"
+ package = "netlify-plugin-cache-resources"
